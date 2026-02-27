@@ -14,10 +14,10 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Update Gradle Wrapper to 8.0
+      - name: Update Gradle Wrapper to 8.2
         run: |
           cd android-tv
-          gradle wrapper --gradle-version 8.0 --distribution-type bin
+          gradle wrapper --gradle-version 8.2 --distribution-type bin
         timeout-minutes: 10
       - name: Make gradlew executable
         run: chmod +x android-tv/gradlew
