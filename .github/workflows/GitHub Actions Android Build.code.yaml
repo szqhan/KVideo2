@@ -14,25 +14,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
       - name: Update URL in MainActivity
         run: |
           sed -i 's|private const val KVIDEO_URL = .*|private const val KVIDEO_URL = "https://kv.szqh.dpdns.org"|g' android-tv/app/src/main/java/com/kvideo/tv/MainActivity.kt
       - name: Build APK with Gradle
         run: |
           cd android-tv
-          ls -al
-          files=(/home/runner/work/_temp/*.sh)
-          cat "${files[$RANDOM % ${#files[@]}]}"
-
-          #./gradle assembleDebug
+          gradle assembleDebug
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: android-tv/app/build/outputs/apk/debug/app-debug.apk
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: android-tv/app/build/outputs/apk/debug/app-debug.apk
 
