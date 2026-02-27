@@ -6,11 +6,9 @@ pluginManagement {
     }
 }
 
-dependencyResolution {
-    repositories {
-        google()
-        mavenCentral()
-    }
+repositories {
+    google()
+    mavenCentral()
 }
 
 rootProject.name = "KVideo-TV"
