@@ -6,10 +6,5 @@ pluginManagement {
     }
 }
 
-repositories {
-    google()
-    mavenCentral()
-}
-
 rootProject.name = "KVideo-TV"
 include(":app")
