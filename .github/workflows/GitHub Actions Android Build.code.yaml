@@ -14,23 +14,22 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Generate Gradle Wrapper
+      - name: Update Gradle Wrapper to 8.0
         run: |
           cd android-tv
-          gradle wrapper --gradle-version 8.5
+          gradle wrapper --gradle-version 8.0 --distribution-type bin
+        timeout-minutes: 10
       - name: Make gradlew executable
         run: chmod +x android-tv/gradlew
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           cache-disabled: true
-      - name: Update URL in MainActivity
-        run: |
-          sed -i 's|private const val KVIDEO_URL = .*|private const val KVIDEO_URL = "https://kv.szqh.dpdns.org"|g' android-tv/app/src/main/java/com/kvideo/tv/MainActivity.kt
       - name: Build APK with Gradle
         run: |
           cd android-tv
           ./gradlew assembleDebug
+        timeout-minutes: 30
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
