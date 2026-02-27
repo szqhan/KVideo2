@@ -20,7 +20,7 @@ jobs:
       - name: Build APK with Gradle
         run: |
           cd android-tv
-          chmod +x ./gradlew
+          # chmod +x ./gradlew
           ./gradlew assembleDebug
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
