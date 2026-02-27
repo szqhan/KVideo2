@@ -16,6 +16,8 @@ jobs:
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-disabled: true
       - name: Update URL in MainActivity
         run: |
           sed -i 's|private const val KVIDEO_URL = .*|private const val KVIDEO_URL = "https://kv.szqh.dpdns.org"|g' android-tv/app/src/main/java/com/kvideo/tv/MainActivity.kt
@@ -28,4 +30,3 @@ jobs:
         with:
           name: app-debug
           path: android-tv/app/build/outputs/apk/debug/app-debug.apk
-
