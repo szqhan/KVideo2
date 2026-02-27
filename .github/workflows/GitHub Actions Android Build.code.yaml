@@ -20,8 +20,8 @@ jobs:
       - name: Build APK with Gradle
         run: |
           cd android-tv
-          ls -al
-          ./gradle assembleDebug
+          ls -al gradle/
+          #./gradle assembleDebug
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
