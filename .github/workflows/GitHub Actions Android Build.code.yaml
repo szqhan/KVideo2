@@ -27,7 +27,7 @@ jobs:
           cache-disabled: true
       - name: Update URL in MainActivity
         run: |
-          sed -i 's|private const val KVIDEO_URL = .*|private const val KVIDEO_URL = "https://kv.szqh.dpdns.org"|g' android-tv/app/src/main/java/com/kvideo/tv/MainActivity.kt
+          sed -i 's|private const val KVIDEO_URL = .*|private const val KVIDEO_URL = "https://kv-delta.vercel.app/premium"|g' android-tv/app/src/main/java/com/kvideo/tv/MainActivity.kt
       - name: Build APK with Gradle
         run: |
           cd android-tv
