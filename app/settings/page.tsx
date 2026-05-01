@@ -11,6 +11,7 @@ import { AccountSettings } from '@/components/settings/AccountSettings';
 import { DisplaySettings } from '@/components/settings/DisplaySettings';
 import { PlayerSettings } from '@/components/settings/PlayerSettings';
 import { SettingsHeader } from '@/components/settings/SettingsHeader';
+import { AppVersionSettings } from '@/components/settings/AppVersionSettings';
 import { UserSourceSettings } from '@/components/settings/UserSourceSettings';
 import { UserDanmakuSettings } from '@/components/settings/UserDanmakuSettings';
 import { PermissionGate } from '@/components/PermissionGate';
@@ -24,6 +25,7 @@ export default function SettingsPage() {
     realtimeLatency,
     searchDisplayMode,
     fullscreenType,
+    seekStepSeconds,
     isAddModalOpen,
     isExportModalOpen,
     isImportModalOpen,
@@ -54,8 +56,11 @@ export default function SettingsPage() {
     handleFullscreenTypeChange,
     proxyMode,
     handleProxyModeChange,
+    handleSeekStepSecondsChange,
     rememberScrollPosition,
+    videoTogetherEnabled,
     handleRememberScrollPositionChange,
+    handleVideoTogetherEnabledChange,
     locale,
     handleLocaleChange,
     danmakuApiUrl,
@@ -76,6 +81,8 @@ export default function SettingsPage() {
         {/* Header */}
         <SettingsHeader />
 
+        <AppVersionSettings />
+
         {/* Account Settings */}
         <AccountSettings />
 
@@ -86,6 +93,10 @@ export default function SettingsPage() {
             onFullscreenTypeChange={handleFullscreenTypeChange}
             proxyMode={proxyMode}
             onProxyModeChange={handleProxyModeChange}
+            seekStepSeconds={seekStepSeconds}
+            onSeekStepSecondsChange={handleSeekStepSecondsChange}
+            videoTogetherEnabled={videoTogetherEnabled}
+            onVideoTogetherEnabledChange={handleVideoTogetherEnabledChange}
             danmakuApiUrl={danmakuApiUrl}
             onDanmakuApiUrlChange={handleDanmakuApiUrlChange}
             danmakuOpacity={danmakuOpacity}
@@ -190,7 +201,7 @@ export default function SettingsPage() {
       <ConfirmDialog
         isOpen={isResetDialogOpen}
         title="清除所有数据"
-        message="这将删除所有设置、历史记录、Cookie 和缓存。此操作不可撤销。是否继续？"
+        message="这将删除本地设置、历史记录、缓存，并退出当前登录会话。此操作不可撤销。是否继续？"
         confirmText="清除"
         cancelText="取消"
         onConfirm={handleResetAll}

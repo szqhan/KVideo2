@@ -4,7 +4,15 @@
  * Mirrors the relevant subset of AppSettings but uses its own localStorage key.
  */
 
-import type { SortOption, SearchDisplayMode, ProxyMode, AdFilterMode } from './settings-store';
+import {
+  type SortOption,
+  type SearchDisplayMode,
+  type ProxyMode,
+  type AdFilterMode,
+  DEFAULT_SEEK_STEP_SECONDS,
+  normalizeSeekStepSeconds,
+  settingsStore,
+} from './settings-store';
 
 const PREMIUM_MODE_SETTINGS_KEY = 'kvideo-premium-mode-settings';
 
@@ -15,6 +23,7 @@ export interface ModeSettings {
   skipIntroSeconds: number;
   autoSkipOutro: boolean;
   skipOutroSeconds: number;
+  seekStepSeconds: number;
   showModeIndicator: boolean;
   adFilterMode: AdFilterMode;
   fullscreenType: 'auto' | 'native' | 'window';
@@ -39,6 +48,7 @@ function getDefaultModeSettings(): ModeSettings {
     skipIntroSeconds: 0,
     autoSkipOutro: false,
     skipOutroSeconds: 0,
+    seekStepSeconds: DEFAULT_SEEK_STEP_SECONDS,
     showModeIndicator: false,
     adFilterMode: 'heuristic',
     fullscreenType: 'auto',
@@ -76,6 +86,7 @@ export const premiumModeSettingsStore = {
         skipIntroSeconds: typeof parsed.skipIntroSeconds === 'number' ? parsed.skipIntroSeconds : 0,
         autoSkipOutro: parsed.autoSkipOutro !== undefined ? parsed.autoSkipOutro : false,
         skipOutroSeconds: typeof parsed.skipOutroSeconds === 'number' ? parsed.skipOutroSeconds : 0,
+        seekStepSeconds: normalizeSeekStepSeconds(parsed.seekStepSeconds),
         showModeIndicator: parsed.showModeIndicator !== undefined ? parsed.showModeIndicator : false,
         adFilterMode: parsed.adFilterMode || 'heuristic',
         fullscreenType: (parsed.fullscreenType === 'window' || parsed.fullscreenType === 'native' || parsed.fullscreenType === 'auto') ? parsed.fullscreenType : 'auto',
@@ -125,9 +136,6 @@ export function getModeSettings(isPremium: boolean): ModeSettings {
   if (isPremium) {
     return premiumModeSettingsStore.getSettings();
   }
-  // For normal mode, extract ModeSettings-shaped data from the main settingsStore
-  // Import dynamically to avoid circular dependencies
-  const { settingsStore } = require('./settings-store');
   const s = settingsStore.getSettings();
   return {
     sortBy: s.sortBy,
@@ -136,6 +144,7 @@ export function getModeSettings(isPremium: boolean): ModeSettings {
     skipIntroSeconds: s.skipIntroSeconds,
     autoSkipOutro: s.autoSkipOutro,
     skipOutroSeconds: s.skipOutroSeconds,
+    seekStepSeconds: s.seekStepSeconds,
     showModeIndicator: s.showModeIndicator,
     adFilterMode: s.adFilterMode,
     fullscreenType: s.fullscreenType,
@@ -160,8 +169,6 @@ export function getModeSettingsStore(isPremium: boolean) {
   if (isPremium) {
     return premiumModeSettingsStore;
   }
-  // Return a wrapper around the main settingsStore that conforms to the same interface
-  const { settingsStore } = require('./settings-store');
   return {
     getSettings: () => getModeSettings(false),
     subscribe: (listener: () => void) => settingsStore.subscribe(listener),

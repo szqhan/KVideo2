@@ -23,6 +23,18 @@ export type SearchDisplayMode = 'normal' | 'grouped';
 export type AdFilterMode = 'off' | 'keyword' | 'heuristic' | 'aggressive';
 export type ProxyMode = 'retry' | 'none' | 'always';
 
+export const DEFAULT_SEEK_STEP_SECONDS = 10;
+export const MIN_SEEK_STEP_SECONDS = 1;
+export const MAX_SEEK_STEP_SECONDS = 120;
+
+export function normalizeSeekStepSeconds(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_SEEK_STEP_SECONDS;
+  }
+
+  return Math.min(MAX_SEEK_STEP_SECONDS, Math.max(MIN_SEEK_STEP_SECONDS, Math.round(value)));
+}
+
 export interface AppSettings {
   sources: VideoSource[];
   premiumSources: VideoSource[];
@@ -36,6 +48,7 @@ export interface AppSettings {
   skipIntroSeconds: number;
   autoSkipOutro: boolean;
   skipOutroSeconds: number;
+  seekStepSeconds: number;
   showModeIndicator: boolean; // Show '直连模式'/'代理模式' badge on player
   adFilter: boolean; // Filter ad tags from m3u8 (legacy, kept for compatibility)
   adFilterMode: AdFilterMode; // 'off' | 'keyword' | 'heuristic' | 'aggressive'
@@ -48,6 +61,7 @@ export interface AppSettings {
   proxyMode: ProxyMode; // Proxy behavior: 'retry' | 'none' | 'always'
   rememberScrollPosition: boolean; // Remember scroll position when navigating back or refreshing
   personalizedRecommendations: boolean; // Show personalized recommendations based on watch history
+  videoTogetherEnabled: boolean; // Show VideoTogether entry on supported player pages
   // Danmaku settings
   danmakuEnabled: boolean; // Show danmaku overlay on video
   danmakuApiUrl: string; // Self-hosted danmaku API endpoint
@@ -65,7 +79,31 @@ const SETTINGS_KEY = 'kvideo-settings';
 export const getDefaultSources = (): VideoSource[] => DEFAULT_SOURCES;
 export const getDefaultPremiumSources = (): VideoSource[] => PREMIUM_SOURCES;
 
+function isSourceSubscription(value: unknown): value is SourceSubscription {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
 
+  const candidate = value as Partial<SourceSubscription>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    typeof candidate.url === 'string'
+  );
+}
+
+function isStoredVideoSource(value: unknown): value is VideoSource {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<VideoSource>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    typeof candidate.baseUrl === 'string'
+  );
+}
 
 function getEnvSubscriptions(customValue?: string): SourceSubscription[] {
   const envValue = (customValue || process.env.SUBSCRIPTION_SOURCES || process.env.NEXT_PUBLIC_SUBSCRIPTION_SOURCES || '').trim();
@@ -76,10 +114,14 @@ function getEnvSubscriptions(customValue?: string): SourceSubscription[] {
     const raw = JSON.parse(envValue);
     if (Array.isArray(raw)) {
       return raw
-        .filter((item: any) => item && typeof item.name === 'string' && typeof item.url === 'string')
-        .map((item: any) => createSubscription(item.name, item.url));
+        .filter((item): item is { name: string; url: string } =>
+          Boolean(item) &&
+          typeof item === 'object' &&
+          typeof (item as { name?: unknown }).name === 'string' &&
+          typeof (item as { url?: unknown }).url === 'string')
+        .map((item) => createSubscription(item.name, item.url));
     }
-  } catch (e) {
+  } catch {
     // Ignore JSON parse error, try direct URL
   }
 
@@ -118,6 +160,7 @@ function getDefaultAppSettings(): AppSettings {
     skipIntroSeconds: 0,
     autoSkipOutro: false,
     skipOutroSeconds: 0,
+    seekStepSeconds: DEFAULT_SEEK_STEP_SECONDS,
     showModeIndicator: false,
     adFilter: false,
     adFilterMode: 'heuristic',
@@ -129,6 +172,7 @@ function getDefaultAppSettings(): AppSettings {
     proxyMode: 'retry',
     rememberScrollPosition: true,
     personalizedRecommendations: true,
+    videoTogetherEnabled: false,
     danmakuEnabled: false,
     danmakuApiUrl: process.env.NEXT_PUBLIC_DANMAKU_API_URL || '',
     danmakuOpacity: 0.7,
@@ -137,6 +181,24 @@ function getDefaultAppSettings(): AppSettings {
     locale: 'zh-CN',
     blockedCategories: [],
   };
+}
+
+export function hasStoredAppSetting(key: keyof AppSettings): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const stored = localStorage.getItem(SETTINGS_KEY);
+  if (!stored) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Object.prototype.hasOwnProperty.call(parsed, key);
+  } catch {
+    return false;
+  }
 }
 
 export const settingsStore = {
@@ -184,16 +246,16 @@ export const settingsStore = {
 
       // Filter out invalid sources (missing baseUrl etc)
       const validSources = (Array.isArray(parsed.sources) ? parsed.sources : getDefaultSources())
-        .filter((s: any) => s && s.id && s.name && s.baseUrl);
+        .filter(isStoredVideoSource);
 
       const validPremiumSources = (Array.isArray(parsed.premiumSources) ? parsed.premiumSources : getDefaultPremiumSources())
-        .filter((s: any) => s && s.id && s.name && s.baseUrl);
+        .filter(isStoredVideoSource);
 
       // Validate that parsed data has all required properties
       return {
         sources: validSources,
         premiumSources: validPremiumSources,
-        subscriptions: mergedSubscriptions.filter((s: any) => s && s.id && s.name && s.url),
+        subscriptions: mergedSubscriptions.filter(isSourceSubscription),
         sortBy: parsed.sortBy || 'default',
         searchHistory: parsed.searchHistory !== undefined ? parsed.searchHistory : true,
         watchHistory: parsed.watchHistory !== undefined ? parsed.watchHistory : true,
@@ -202,6 +264,7 @@ export const settingsStore = {
         skipIntroSeconds: typeof parsed.skipIntroSeconds === 'number' ? parsed.skipIntroSeconds : 0,
         autoSkipOutro: parsed.autoSkipOutro !== undefined ? parsed.autoSkipOutro : false,
         skipOutroSeconds: typeof parsed.skipOutroSeconds === 'number' ? parsed.skipOutroSeconds : 0,
+        seekStepSeconds: normalizeSeekStepSeconds(parsed.seekStepSeconds),
         showModeIndicator: parsed.showModeIndicator !== undefined ? parsed.showModeIndicator : false,
         adFilter: parsed.adFilter !== undefined ? parsed.adFilter : false,
         adFilterMode: parsed.adFilterMode || 'heuristic',
@@ -213,6 +276,7 @@ export const settingsStore = {
         proxyMode: (parsed.proxyMode === 'retry' || parsed.proxyMode === 'none' || parsed.proxyMode === 'always') ? parsed.proxyMode : 'retry',
         rememberScrollPosition: parsed.rememberScrollPosition !== undefined ? parsed.rememberScrollPosition : true,
         personalizedRecommendations: parsed.personalizedRecommendations !== undefined ? parsed.personalizedRecommendations : true,
+        videoTogetherEnabled: parsed.videoTogetherEnabled !== undefined ? parsed.videoTogetherEnabled : false,
         danmakuEnabled: parsed.danmakuEnabled !== undefined ? parsed.danmakuEnabled : false,
         danmakuApiUrl: typeof parsed.danmakuApiUrl === 'string' ? (parsed.danmakuApiUrl || process.env.NEXT_PUBLIC_DANMAKU_API_URL || '') : (process.env.NEXT_PUBLIC_DANMAKU_API_URL || ''),
         danmakuOpacity: typeof parsed.danmakuOpacity === 'number' ? parsed.danmakuOpacity : 0.7,
@@ -297,10 +361,18 @@ export const settingsStore = {
       localStorage.removeItem(SETTINGS_KEY);
       localStorage.removeItem(SEARCH_HISTORY_KEY);
       localStorage.removeItem(WATCH_HISTORY_KEY);
+      sessionStorage.removeItem('kvideo-session');
+      localStorage.removeItem('kvideo-session');
+      sessionStorage.removeItem('kvideo-unlocked');
+      localStorage.removeItem('kvideo-unlocked');
+      localStorage.removeItem('kvideo_search_cache');
 
-      // Clear all cookies
-      document.cookie.split(";").forEach((c) => {
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      // Clear script-readable cookies. httpOnly auth cookies are cleared server-side.
+      document.cookie.split(';').forEach((cookie) => {
+        document.cookie = cookie.replace(
+          /^ +/,
+          '',
+        ).replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
       });
 
       // Clear cache if available
