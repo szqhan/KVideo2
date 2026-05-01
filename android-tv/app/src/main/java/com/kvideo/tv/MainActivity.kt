@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
          * The URL of your deployed KVideo instance.
          * Change this to your own domain or IP address.
          */
-        private const val KVIDEO_URL = "https://kv.szqhan.cloudns.org/"
+        private const val KVIDEO_URL = "kvideo.example.com"
     }
 
     private lateinit var webView: WebView
